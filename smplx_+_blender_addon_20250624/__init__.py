@@ -4,7 +4,7 @@
 bl_info = {
     "name": "SMPL-X + for Blender",
     "author": "Lison Boo",
-    "version": (1, 0),
+    "version": (1, 0, 1),
     "blender": (4, 3, 2),
     "location": "Viewport > Right panel",
     "description": "",
@@ -25,7 +25,6 @@ from math import sqrt
 
 
 global jointList
-#jointList = []
 
 # subclass JSONEncoder
 class setEncoder(JSONEncoder):
@@ -42,7 +41,7 @@ class LoadOperator(Operator, ImportHelper):
     bl_label = "Simple Object Operator"
 
 
-    # Optional filter for file extensions (example: only .json)
+    # Optional filter for file extensionsn for now only .npz
     filter_glob: StringProperty(
         default='*.npz',
         options={'HIDDEN'},
@@ -61,19 +60,18 @@ class LoadOperator(Operator, ImportHelper):
         
         context.scene.my_file_path = self.filepath
         
-        
-        #besoin d'être ici pour attendre le choix du fichier
+        #needed to be here to get the choice of file
         
         bpy.ops.object.smplx_add_animation(filepath=context.scene.my_file_path)
         
         global jointList
         jointList = []
         
+        #register the list of joints for descriptors
         for armature in [ob for ob in bpy.data.objects if ob.type == 'ARMATURE']:
             for bone in armature.data.bones:
                 jointList.append(bone.name)
                 
-        #print(jointList)
         
         return {'FINISHED'}
     
@@ -121,8 +119,9 @@ class MyCheckboxItem(bpy.types.PropertyGroup):
 
 
     #### POSITION DESCRIPTOR ####
+    
 def position(list):
-    """Affiche sur la console Python les coo' XYZ de la liste des jointures dans 'list'"""
+    """Print in the Python console coordonates XYZ of the list of joints inside 'list' """
     obj = bpy.context.object.name        
     armature_obj = bpy.data.objects.get(obj)
     bone_names = {}
@@ -130,7 +129,7 @@ def position(list):
     #Get the name of the armature
     armature_test = [ob for ob in bpy.data.objects if ob.type == 'ARMATURE']
 
-    #pour toutes les jointures sélectionnées
+    #for all joints selected
     for join in list:
         
         ob = bpy.data.objects[armature_test[0].name].pose.bones[join]
@@ -140,7 +139,7 @@ def position(list):
             
         bone_names.update({join:{"x":world_location[0],"y":world_location[1],"z":world_location[2]}})
             
-    #dictionnaire avec la jointure et les coordonées
+    #print dictionary with joints and their coordonates
     print(bone_names)
 
 class PopUpPosition (bpy.types.Operator):
@@ -153,6 +152,7 @@ class PopUpPosition (bpy.types.Operator):
     
     def execute(self,context):
         
+        #aka the code when the botton is pressed
         selected = [item.name for item in context.scene.my_checkbox_list if item.value]
         position(selected)
         
@@ -223,8 +223,8 @@ class PopUpDistance(bpy.types.Operator):
         selected1 = context.scene.my_dropdown_enum1
         selected2 = context.scene.my_dropdown_enum2
         
-        print(selected1.lower())
-        print(selected2.lower())
+        #print(selected1.lower())
+        #print(selected2.lower())
         
         distance(selected1.lower(), selected2.lower())
         
@@ -243,6 +243,9 @@ class PopUpDistance(bpy.types.Operator):
     
     
 def distance_frames(joint, frame_start, frame_end):
+    """ Return the distance of a joint between two frame"""
+    # distance with only start and end, no in between, can't be reliable on long therme
+    
     
     obj = bpy.context.object.name        
     armature_obj = bpy.data.objects.get(obj)
@@ -265,6 +268,10 @@ def distance_frames(joint, frame_start, frame_end):
     world_matrix_end = armature_obj.matrix_world @ ob_joint_end.matrix
     world_location_end = world_matrix_end.to_translation()
     
+    
+    #### FINAL CALCULATION ####
+    
+    
     x = world_location_start[0] - world_location_end[0]
     y = world_location_start[1] - world_location_end[1]
     z = world_location_start[2] - world_location_end[2]
@@ -272,9 +279,11 @@ def distance_frames(joint, frame_start, frame_end):
     print("total distance meter :",sqrt(sqrt(x**2 + y**2)+z**2))
     
     return sqrt(sqrt(x**2 + y**2)+z**2)
+
+
     
 def speed(joints, frame_start, frame_end):
-    
+    """ Print the  movement speed of a list of joints for a selected period of time"""
     myList = {"Result":{}}
     frames = frame_end - frame_start
     
@@ -286,9 +295,6 @@ def speed(joints, frame_start, frame_end):
         for j in joints :
             
             myList["Result"].update({j:str((distance_frames(j, frame_start, frame_end)/time))})
-            
-        
-        #######
     
     bpy.data.scenes['Scene'].frame_set(0)
     
@@ -300,7 +306,7 @@ class PopUpSpeed (bpy.types.Operator):
     """Open a pop Up permitting to select joints run 'position'"""
     
     bl_label = "Speed Dialog Box"
-    bl_idname = "descript.position"
+    bl_idname = "descript.speed"
     
     def execute(self,context):
         
