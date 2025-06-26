@@ -240,45 +240,42 @@ class PopUpDistance(bpy.types.Operator):
         layout2.prop(context.scene, "my_dropdown_enum2")
 
     ##### SPEED DESCRIPTOR #####
-    
-    
+
 def distance_frames(joint, frame_start, frame_end):
     """ Return the distance of a joint between two frame"""
-    # distance with only start and end, no in between, can't be reliable on long therme
     
-    
+    distance = 0
     obj = bpy.context.object.name        
     armature_obj = bpy.data.objects.get(obj)
     
     armature_test = [ob for ob in bpy.data.objects if ob.type == 'ARMATURE']
     
-    ##### INFO AT FRAME_START #######
+    for frame in range(frame_start, (frame_end-1)):
+        
+        ##### INFO AT FRAME_START #######
+        bpy.data.scenes['Scene'].frame_set(frame)
     
-    bpy.data.scenes['Scene'].frame_set(frame_start)
+        ob_joint_start = bpy.data.objects[armature_test[0].name].pose.bones[joint]
+        world_matrix_start = armature_obj.matrix_world @ ob_joint_start.matrix
+        world_location_start = world_matrix_start.to_translation()
+        
+        ##### INFO AT FRAME_END #####
+        
+        bpy.data.scenes['Scene'].frame_set(frame+1)
+        
+        ob_joint_end = bpy.data.objects[armature_test[0].name].pose.bones[joint]
+        world_matrix_end = armature_obj.matrix_world @ ob_joint_end.matrix
+        world_location_end = world_matrix_end.to_translation()
+        
+        
+        x = world_location_start[0] - world_location_end[0]
+        y = world_location_start[1] - world_location_end[1]
+        z = world_location_start[2] - world_location_end[2]
+        
+        distance = distance + sqrt(sqrt(x**2 + y**2)+z**2)
     
-    ob_joint_start = bpy.data.objects[armature_test[0].name].pose.bones[joint]
-    world_matrix_start = armature_obj.matrix_world @ ob_joint_start.matrix
-    world_location_start = world_matrix_start.to_translation()
-    
-    ##### INFO AT FRAME_END #####
-    
-    bpy.data.scenes['Scene'].frame_set(frame_end)
-    
-    ob_joint_end = bpy.data.objects[armature_test[0].name].pose.bones[joint]
-    world_matrix_end = armature_obj.matrix_world @ ob_joint_end.matrix
-    world_location_end = world_matrix_end.to_translation()
-    
-    
-    #### FINAL CALCULATION ####
-    
-    
-    x = world_location_start[0] - world_location_end[0]
-    y = world_location_start[1] - world_location_end[1]
-    z = world_location_start[2] - world_location_end[2]
-    
-    print("total distance meter :",sqrt(sqrt(x**2 + y**2)+z**2))
-    
-    return sqrt(sqrt(x**2 + y**2)+z**2)
+    #print(distance)
+    return distance
 
 
     
@@ -310,8 +307,8 @@ class PopUpSpeed (bpy.types.Operator):
     
     def execute(self,context):
         
-        frame_start : context.scene.my_frame_start 
-        frame_end : context.scene.my_frame_end
+        frame_start = context.scene.my_frame_start 
+        frame_end = context.scene.my_frame_end
         
         selected = [item.name for item in context.scene.my_checkbox_list if item.value]
         
@@ -404,7 +401,7 @@ def register():
         register_class(cls) 
         
     bpy.types.Scene.my_file_path = StringProperty(name="Selected File")   
-    bpy.types.Scene.my_frame_start = bpy.props.IntProperty(name="Selected First Frame",default=0, min=0)
+    bpy.types.Scene.my_frame_start = bpy.props.IntProperty(name="Selected First Frame", min=0)
     bpy.types.Scene.my_frame_end = bpy.props.IntProperty(name="Selected Last Frame",default=0, min=0)
     
     # Register the collection property
